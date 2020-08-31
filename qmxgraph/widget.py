@@ -203,11 +203,10 @@ class QmxGraph(QWidget):
 
         :param EventsBridge bridge: Bridge with event handlers.
         """
-        signal_name_list = (
-            'on_cells_added', 'on_cells_removed', 'on_label_changed',
-            'on_selection_changed', 'on_terminal_changed',
-            'on_terminal_with_port_changed', 'on_view_update',
-        )
+        signal_name_list = [
+            k for k, v in EventsBridge.__dict__.items()
+            if isinstance(v, pyqtSignal)
+        ]
         for signal_name in signal_name_list:
             own_signal = getattr(self._events_bridge, signal_name)
             outside_signal = getattr(bridge, signal_name)
@@ -226,6 +225,8 @@ class QmxGraph(QWidget):
             self.api.on_terminal_with_port_changed(
                 'bridge_events_handler.terminal_with_port_changed_slot')
             self.api.on_view_update('bridge_events_handler.view_update_slot')
+            self.api.on_cells_bounds_changed(
+                'bridge_events_handler.cells_bounds_changed_slot')
 
     def set_double_click_handler(self, handler):
         """
@@ -482,6 +483,10 @@ def _make_async_pyqt_slot(slot_name, signal_name, parameters):
 
     def async_slot(self, *args):
         signal = getattr(self, signal_name)
+        convert_args = getattr(
+            self, f'js_to_py_args_{signal_name}', lambda x: x,
+        )
+        args = convert_args(args)
         QTimer.singleShot(1, lambda: signal.emit(*args))
 
     return pyqtSlot(*parameters, name=slot_name)(async_slot)
@@ -499,9 +504,11 @@ def _create_async_slots(namespace, signal_holder_class):
             signal_name = m.group(1)
             assert signal_name.startswith('on_')
             slot_name = signal_name[3:] + '_slot'
-            parameters = m.group(2)
-            parameters = parameters.split(',') if parameters else []
-            namespace[slot_name] = _make_async_pyqt_slot(slot_name, signal_name, parameters)
+            if slot_name not in namespace:
+                parameters = m.group(2)
+                parameters = parameters.split(',') if parameters else []
+                namespace[slot_name] = _make_async_pyqt_slot(slot_name, signal_name, parameters)
+                namespace[slot_name] = _make_async_pyqt_slot(slot_name, signal_name, parameters)
 
 
 class ErrorHandlingBridge(QObject):
@@ -581,6 +588,13 @@ class EventsBridge(QObject):
         - graph_view: str
         - scale_and_translation: QVariantList
 
+    :ivar pyqtSignal on_cells_bounds_changed: JavaScript client code emits
+        this signal when some cells' bounds changes.The arguments `dict`
+        maps the affected `cell_id`s
+        to :class:`qmxgraph.cell_bounds.CellBounds` instances:
+
+        - changed_bounds: dict
+
 
     Using this object connecting to events from JavaScript basically becomes a
     matter of using Qt signals.
@@ -620,6 +634,7 @@ class EventsBridge(QObject):
     on_terminal_with_port_changed = pyqtSignal(
         str, str, str, str, str, str, name='on_terminal_with_port_changed')
     on_view_update = pyqtSignal(str, 'QVariantList', name='on_view_update')
+    on_cells_bounds_changed = pyqtSignal('QVariant', name='on_cells_bounds_changed')
 
 
 class JsPythonEventsBridge(EventsBridge):
@@ -627,6 +642,18 @@ class JsPythonEventsBridge(EventsBridge):
     Javascript interface object for EventsBridge.
     """
     _create_async_slots(locals(), EventsBridge)
+
+    @staticmethod
+    def js_to_py_args_on_cells_bounds_changed(js_args):
+        """
+        Convert the javascript arguments to respective python objects.
+        """
+        from qmxgraph.cell_bounds import CellBounds
+        (bounds_changed,) = js_args
+        bounds_changed = {
+            k: CellBounds(**v) for k, v in bounds_changed.items()
+        }
+        return bounds_changed,
 
 
 class _DoubleClickBridge(QObject):
