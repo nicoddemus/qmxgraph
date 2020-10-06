@@ -68,20 +68,15 @@ class QWebViewWithDragDrop(QWebEngineView):
         self._loaded = False
         self.setHtml('')
 
-    def eval_js(self, statement):
+    def eval_js(self, result_callback, statement):
         """
         Evaluate a JavaScript statement using this web view frame as context.
 
+        :param Callable[Any,None] result_callback: This call receives the
+            result from the execution.
         :param str statement: A JavaScript statement.
-        :rtype: object
-        :return: Return of statement.
         """
-        from qmxgraph.callback_blocker import CallbackBlocker
-
-        with CallbackBlocker(timeout=5000) as cb:
-            self.page().runJavaScript(statement, cb)
-
-        return cb.args[0]
+        self.page().runJavaScript(statement, result_callback)
 
     # Overridden Events -------------------------------------------------------
 

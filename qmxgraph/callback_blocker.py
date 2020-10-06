@@ -1,5 +1,5 @@
 # Heavily based on `pytestqt.wait_signal.CallbackBlocker`.
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Hashable
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSignal
@@ -92,6 +92,156 @@ class CallbackBlocker:
         if value is None:
             # only wait if no exception happened inside the "with" block.
             self.wait()
+
+
+class CallbackBarrier:
+    """
+    This class allow to register a callable to be call after an arbitrary
+    number of callbacks are called. When using as a context manager `wait`
+    is implicitly called when exiting.
+
+    A function should be supplied when creating tha barrier, that function
+    will be called when the barrier is "crossed".
+
+    Call "cleanup" after async functions "foo" and "bar" are executed.
+    This will not block waiting for any call to complete:
+
+    ```
+    with CallbackBarrier(cleanup) as barrier:
+        barrier.increment(2)
+        foo(result_callback=barrier)
+        bar(result_callback=barrier)
+    ```
+
+    `CallbackBlocker` can be used in conjunction of `CallbackBarrier`.
+    This will block when exiting the context until the "barrier" is called
+    twice:
+
+    ```
+    with CallbackBlocker() as cb, CallbackBarrier(cb) as barrier:
+        barrier.increment(2)
+        foo(result_callback=barrier)
+        bar(result_callback=barrier)
+    ```
+
+    The are 3 major states for a barrier:
+
+    - editing: the barrier can be `increment`ed and `wait`ed;
+    - waiting: `increment`s raise errors (barrier not called the expected
+        times yet);
+    - crossed: the barrier have been `wait`ed on and it has been called the
+        expected times already causing the registered function to be called,
+        `increment`s and extra call to the barrier raise errors;
+    """
+
+    class StoredResult:
+        def __init__(self, parent):
+            # Create a cycle with the parent to prevent the parent collection
+            # because parent hold barrier logic.
+            self._parent = parent
+            self._value = None
+            self._called = False
+
+        @property
+        def value(self) -> Optional[Any]:
+            assert self._called
+            return self._value
+
+        def __call__(self, value: Optional[Any]) -> None:
+            if self._called:
+                raise RuntimeError('stored result can store only one value')
+            self._called = True
+            self._value = value
+
+            self._parent(value)
+            self._parent = None  # Break the cycle.
+
+    def __init__(
+        self, to_execute_after_barrier: Callable, pass_self: bool = False
+    ):
+        self._waiting_on_barrier = False
+        self._crossed = False
+        self._calls_pending = 0
+        self._stored_results = {}
+
+        self._to_execute_after_barrier = to_execute_after_barrier
+        self._pass_self = pass_self
+
+    def create_stored_result_callback(
+        self, key: Hashable
+    ) -> 'CallbackBarrier.StoredResult':
+        """
+        Creates a slot in the barrier to store a call result, this value cen
+        be safely queried after the barrie has been crossed.
+        """
+        if key in self._stored_results:
+            raise ValueError(
+                'stored result "key" already in use ("key"s should be unique)'
+            )
+        stored_result = self.StoredResult(self)
+        self.increment()
+        self._stored_results[key] = stored_result
+        return stored_result
+
+    def __getitem__(self, item: Hashable) -> 'CallbackBarrier.StoredResult':
+        if item in self._stored_results:
+            return self._stored_results[item]
+        else:
+            return self.create_stored_result_callback(item)
+
+    def increment(self, n: int = 1) -> None:
+        """
+        Increase the number of times the barrier must be called before calling
+        the registered function.
+
+        :type n: int
+        """
+        if self._waiting_on_barrier or self._crossed:
+            raise RuntimeError("can't increment barrier after wait")
+        if n < 1:
+            raise ValueError('`n` should be greater that 0 (zero)')
+        self._calls_pending += n
+
+    def wait(self) -> None:
+        """
+        Puts the barrier in the "waiting" state. If the expected number of
+        calls have already been reached "cross" the barrier.
+        """
+        if self._crossed:
+            raise RuntimeError("can't wait on crossed barrier")
+        if self._waiting_on_barrier:
+            raise RuntimeError("already waiting on barrier")
+        if self._calls_pending < 0:
+            raise RuntimeError(
+                'barrier already called more times than expected'
+            )
+        self._waiting_on_barrier = True
+        if self._calls_pending == 0:
+            self._cross_barrier()
+
+    def _cross_barrier(self) -> None:
+        self._crossed = True
+        self._waiting_on_barrier = False
+
+        to_call = self._to_execute_after_barrier
+        self._to_execute_after_barrier = None
+        if self._pass_self:
+            to_call(self)
+        else:
+            to_call()
+
+    def __call__(self, *args: Optional[Any], **kwargs: Optional[Any]) -> None:
+        if self._crossed:
+            raise RuntimeError('unexpected call after crossing barrier')
+        self._calls_pending -= 1
+        if self._waiting_on_barrier and self._calls_pending == 0:
+            self._cross_barrier()
+
+    def __enter__(self) -> 'CallbackBarrier':
+        return self
+
+    def __exit__(self, type, value, traceback) -> None:
+        self.wait()
 
 
 class CallbackCalledTwiceError(Exception):

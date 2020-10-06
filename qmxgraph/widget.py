@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import QDialog, QGridLayout, QShortcut, QSizePolicy, \
 
 from qmxgraph import constants, render
 from qmxgraph.api import QmxGraphApi
-from qmxgraph.callback_blocker import silent_disconnect
+from qmxgraph.callback_blocker import silent_disconnect, CallbackBarrier
 from qmxgraph.configuration import GraphOptions, GraphStyles
 
 from ._web_view import QWebViewWithDragDrop
@@ -162,18 +162,23 @@ class QmxGraph(QWidget):
         """
         Load graph drawing page, if not yet loaded.
         """
-        if not self.is_loaded() or not self._web_view.is_loading():
-            self._load_graph_page()
+        def load_indirection(is_loaded):
+            if not is_loaded or not self._web_view.is_loading():
+                self._load_graph_page()
 
-    def is_loaded(self):
+        self.is_loaded(load_indirection)
+
+    def is_loaded(self, cb):
         """
         :rtype: bool
         :return: Is graph page already loaded?
         """
         # If failed in initialization of graph and it isn't running do not
         # considered it loaded, as graph and its API aren't safe for use
-        return self._web_view.is_loaded() and \
-            self._web_view.eval_js('(typeof graphs !== "undefined") && graphs.isRunning()')
+        if not self._web_view.is_loaded():
+            cb(False)
+        else:
+            self._web_view.eval_js(cb, '(typeof graphs !== "undefined") && graphs.isRunning()')
 
     def blank(self):
         """
@@ -213,20 +218,19 @@ class QmxGraph(QWidget):
             silent_disconnect(own_signal, outside_signal)
             own_signal.connect(outside_signal)
 
-    def _connect_events_bridge(self):
-        if self.is_loaded():
-            self.api.on_cells_added('bridge_events_handler.cells_added_slot')
-            self.api.on_cells_removed('bridge_events_handler.cells_removed_slot')
-            self.api.on_label_changed('bridge_events_handler.label_changed_slot')
-            self.api.on_selection_changed(
-                'bridge_events_handler.selection_changed_slot')
-            self.api.on_terminal_changed(
-                'bridge_events_handler.terminal_changed_slot')
-            self.api.on_terminal_with_port_changed(
-                'bridge_events_handler.terminal_with_port_changed_slot')
-            self.api.on_view_update('bridge_events_handler.view_update_slot')
-            self.api.on_cells_bounds_changed(
-                'bridge_events_handler.cells_bounds_changed_slot')
+    def _connect_events_bridge(self, cb_barrier):
+        """
+        :type cb_barrier: CallbackBarrier
+        """
+        signal_name_list = [
+            k for k, v in EventsBridge.__dict__.items()
+            if isinstance(v, pyqtSignal)
+        ]
+        cb_barrier.increment(len(signal_name_list))
+        for signal_name in signal_name_list:
+            api_func = getattr(self.api, signal_name)
+            event_bridge_slot_name = f'bridge_events_handler.{signal_name[3:]}_slot'
+            api_func(cb_barrier, event_bridge_slot_name)
 
     def set_double_click_handler(self, handler):
         """
@@ -246,10 +250,13 @@ class QmxGraph(QWidget):
         if handler:
             self._double_click_bridge.on_double_click.connect(handler)
 
-    def _connect_double_click_handler(self):
-        if self.is_loaded():
-            self.api.set_double_click_handler(
-                'bridge_double_click_handler.double_click_slot')
+    def _connect_double_click_handler(self, cb_barrier):
+        """
+        :type cb_barrier: CallbackBarrier
+        """
+        cb_barrier.increment()
+        self.api.set_double_click_handler(
+                cb_barrier, 'bridge_double_click_handler.double_click_slot')
 
     def set_popup_menu_handler(self, handler):
         """
@@ -271,10 +278,13 @@ class QmxGraph(QWidget):
         if handler:
             self._popup_menu_bridge.on_popup_menu.connect(handler)
 
-    def _connect_popup_menu_handler(self):
-        if self.is_loaded():
-            self.api.set_popup_menu_handler(
-                'bridge_popup_menu_handler.popup_menu_slot')
+    def _connect_popup_menu_handler(self, cb_barrier):
+        """
+        :type cb_barrier: CallbackBarrier
+        """
+        cb_barrier.increment()
+        self.api.set_popup_menu_handler(
+                cb_barrier, 'bridge_popup_menu_handler.popup_menu_slot')
 
     @property
     def api(self):
@@ -338,13 +348,16 @@ class QmxGraph(QWidget):
     # Overridden events -------------------------------------------------------
 
     def resizeEvent(self, event):
-        if self.is_loaded():
-            # Whenever graph widget is resized, it is going to resize
-            # underlying graph in JS to fit widget as well as possible.
-            width = event.size().width()
-            height = event.size().height()
-            self.api.resize_container(width, height)
 
+        def reseize_indirection(is_loaded):
+            if is_loaded:
+                # Whenever graph widget is resized, it is going to resize
+                # underlying graph in JS to fit widget as well as possible.
+                self.api.resize_container(_noop, width, height)
+
+        width = event.size().width()
+        height = event.size().height()
+        self.is_loaded(reseize_indirection)
         event.ignore()
 
     # Protected plumbing methods ----------------------------------------------
@@ -374,25 +387,41 @@ class QmxGraph(QWidget):
         """
         self_ref = weakref.ref(self)
 
+        def trigger_load_finished():
+            self_ = self_ref()
+            if self_:
+                self_.loadFinished.emit(True)
+
+        def post_load_indirection(is_loaded):
+            self_ = self_ref()
+            if not self_:
+                return
+
+            if is_loaded:
+                with CallbackBarrier(trigger_load_finished) as cb_barrier:
+                    # TODO: widget remain w/ disabled appearance even after enabled
+                    # Allow user to interact with page again
+                    # self_._web_view.setEnabled(True)
+                    self_._connect_events_bridge(cb_barrier)
+                    self_._connect_double_click_handler(cb_barrier)
+                    self_._connect_popup_menu_handler(cb_barrier)
+
+                    width = self_.width()
+                    height = self_.height()
+                    cb_barrier.increment()
+                    self_.api.resize_container(cb_barrier, width, height)
+            else:
+                self_.loadFinished.emit(False)
+
         def post_load(ok):
             self_ = self_ref()
             if not self_:
                 return
-            ok = bool(ok and self_.is_loaded())
+
             if ok:
-                # TODO: widget remain w/ disabled appearance even after enabled
-                # Allow user to interact with page again
-                # self_._web_view.setEnabled(True)
-
-                self_._connect_events_bridge()
-                self_._connect_double_click_handler()
-                self_._connect_popup_menu_handler()
-
-                width = self_.width()
-                height = self_.height()
-                self_.api.resize_container(width, height)
-
-            self_.loadFinished.emit(ok)
+                self_.is_loaded(post_load_indirection)
+            else:
+                post_load_indirection(False)
 
         self._web_view.loadFinished.connect(post_load)
 
@@ -444,27 +473,32 @@ class QmxGraph(QWidget):
             y = event.pos().y()
 
             if version in (1, 2):
+                def add_vertices(scale):
+                    for v in vertices:
+                        # place vertices with an offset so their center falls
+                        # in the event point.
+                        vertex_x = x + (v['dx'] - v['width'] * 0.5) * scale
+                        vertex_y = y + (v['dy'] - v['height'] * 0.5) * scale
+                        self.api.insert_vertex(
+                            _noop,
+                            x=vertex_x,
+                            y=vertex_y,
+                            width=v['width'],
+                            height=v['height'],
+                            label=v['label'],
+                            style=v.get('style', None),
+                            tags=v.get('tags', {}),
+                        )
+
                 vertices = parsed.get('vertices', [])
-                scale = self.api.get_zoom_scale()
-                for v in vertices:
-                    # place vertices with an offset so their center falls
-                    # in the event point.
-                    vertex_x = x + (v['dx'] - v['width'] * 0.5) * scale
-                    vertex_y = y + (v['dy'] - v['height'] * 0.5) * scale
-                    self.api.insert_vertex(
-                        x=vertex_x,
-                        y=vertex_y,
-                        width=v['width'],
-                        height=v['height'],
-                        label=v['label'],
-                        style=v.get('style', None),
-                        tags=v.get('tags', {}),
-                    )
+                if vertices:
+                    self.api.get_zoom_scale(add_vertices)
 
             if version in (2,):
                 decorations = parsed.get('decorations', [])
                 for v in decorations:
                     self.api.insert_decoration(
+                        _noop,
                         x=x,
                         y=y,
                         width=v['width'],
@@ -507,7 +541,6 @@ def _create_async_slots(namespace, signal_holder_class):
             if slot_name not in namespace:
                 parameters = m.group(2)
                 parameters = parameters.split(',') if parameters else []
-                namespace[slot_name] = _make_async_pyqt_slot(slot_name, signal_name, parameters)
                 namespace[slot_name] = _make_async_pyqt_slot(slot_name, signal_name, parameters)
 
 
@@ -698,3 +731,7 @@ class _JsPythonPopupMenuBridge(_PopupMenuBridge):
     Javascript interface object for _PopupMenuBridge.
     """
     _create_async_slots(locals(), _PopupMenuBridge)
+
+
+def _noop(*args):
+    pass

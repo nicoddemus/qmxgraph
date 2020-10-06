@@ -29,10 +29,13 @@ class QmxGraphApi(object):
         """
         self._graph = weakref.ref(graph)
 
-    def insert_vertex(self, x, y, width, height, label, style=None, tags=None, id=None):
+    def insert_vertex(self, result_callback, x, y, width, height, label,
+                      style=None, tags=None, id=None):
         """
         Inserts a new vertex in graph.
 
+        :param Callable[[str],None] result_callback: This call receives the id
+            of new vertex.
         :param int x: X coordinate in screen coordinates.
         :param int y: Y coordinate in screen coordinates.
         :param int width: Width in pixels.
@@ -47,17 +50,18 @@ class QmxGraphApi(object):
             interaction with cells in a graph.
         :param Optional[str] id: The id of the edge. If omitted (or non
             unique) an id is generated.
-        :rtype: str
-        :return: Id of new vertex.
         """
         return self.call_api(
-            'insertVertex', x, y, width, height, label, style, tags, id)
+            result_callback, 'insertVertex', x, y, width, height, label,
+            style, tags, id)
 
-    def insert_port(self, vertex_id, port_name, x, y, width, height,
-                    label=None, style=None, tags=None):
+    def insert_port(self, result_callback, vertex_id, port_name, x, y, width,
+                    height, label=None, style=None, tags=None):
         """
         Inserts a new port in vertex.
 
+        :param Callable[[Any],None] result_callback: This is called after the
+            underlying method executes.
         :param str vertex_id: The id of the vertex to witch add this port.
         :param str port_name: The name used to refer to the new port.
         :param float x: The normalized (0-1) X coordinate for the port
@@ -76,14 +80,17 @@ class QmxGraphApi(object):
             interaction with cells in a graph.
         """
         return self.call_api(
-            'insertPort', vertex_id, port_name, x, y, width, height, label,
-            style, tags)
+            result_callback, 'insertPort', vertex_id, port_name, x, y, width,
+            height, label, style, tags)
 
-    def insert_edge(self, source_id, target_id, label, style=None, tags=None,
-                    source_port_name=None, target_port_name=None, id=None):
+    def insert_edge(self, result_callback, source_id, target_id, label,
+                    style=None, tags=None, source_port_name=None,
+                    target_port_name=None, id=None):
         """
         Inserts a new edge between two vertices in graph.
 
+        :param Callable[[str],None] result_callback: This call receives the id
+            of new edge.
         :param str source_id: Id of source vertex in graph.
         :param str target_id: Id of target vertex in graph.
         :param str label: Label of edge.
@@ -100,15 +107,13 @@ class QmxGraphApi(object):
             to target vertex.
         :param Optional[str] id: The id of the edge. If omitted (or non
             unique) an id is generated.
-        :rtype: str
-        :return: Id of new edge.
         """
         return self.call_api(
-            'insertEdge', source_id, target_id, label, style, tags,
-            source_port_name, target_port_name, id)
+            result_callback, 'insertEdge', source_id, target_id, label, style,
+            tags, source_port_name, target_port_name, id)
 
-    def insert_decoration(
-            self, x, y, width, height, label, style=None, tags=None, id=None):
+    def insert_decoration(self, result_callback, x, y, width, height, label,
+                          style=None, tags=None, id=None):
         """
         Inserts a new decoration over an edge in graph. A decoration is
         basically an overlay object that is representing some entity over the
@@ -117,6 +122,8 @@ class QmxGraphApi(object):
         Note that x and y must be inside the bounds of an edge, otherwise this
         call will raise.
 
+        :param Callable[[str],None] result_callback: This call receives the id
+            of new decoration.
         :param int x: X coordinate in screen coordinates.
         :param int y: Y coordinate in screen coordinates.
         :param int width: Width in pixels.
@@ -131,14 +138,14 @@ class QmxGraphApi(object):
             interaction with cells in a graph.
         :param Optional[str] id: The id of the decoration. If omitted (or non
             unique) an id is generated.
-        :rtype: str
-        :return: Id of new decoration.
         """
         return self.call_api(
-            'insertDecoration', x, y, width, height, label, style, tags, id)
+            result_callback, 'insertDecoration', x, y, width, height, label,
+            style, tags, id)
 
-    def insert_decoration_on_edge(self, edge_id, position, width, height,
-                                  label, style=None, tags=None, id=None):
+    def insert_decoration_on_edge(self, result_callback, edge_id, position,
+                                  width, height, label, style=None, tags=None,
+                                  id=None):
         """
         Inserts a new decoration over an edge in graph. A decoration is
         basically an overlay object that is representing some entity over the
@@ -147,6 +154,8 @@ class QmxGraphApi(object):
         Note that x and y must be inside the bounds of an edge, otherwise this
         call will raise.
 
+        :param Callable[[str],None] result_callback: This call receives the id
+            of new decoration.
         :param str edge_id: Id of an edge in graph.
         :param float position: The normalized position in the edge.
         :param int width: Width in pixels.
@@ -161,22 +170,21 @@ class QmxGraphApi(object):
             interaction with cells in a graph.
         :param Optional[str] id: The id of the decoration. If omitted (or non
             unique) an id is generated.
-        :rtype: str
-        :return: Id of new decoration.
         """
         return self.call_api(
-            'insertDecorationOnEdge', edge_id, position, width, height, label,
-            style, tags, id)
+            result_callback, 'insertDecorationOnEdge', edge_id, position,
+            width, height, label, style, tags, id)
 
-    def insert_table(
-            self, x, y, width, contents, title, tags=None, style=None,
-            parent_id=None, id=None):
+    def insert_table(self, result_callback, x, y, width, contents, title,
+                     tags=None, style=None, parent_id=None, id=None):
         """
         Inserts a new table in graph. A table is an object that can be used
         in graph to display tabular information about other cells, for
         instance. Tables can't be connected to other cells like vertices,
         edges nor decorations.
 
+        :param Callable[[str],None] result_callback: This call receives the id
+            of new table.
         :param int x: X coordinate in screen coordinates.
         :param int y: Y coordinate in screen coordinates.
         :param int width: Width in pixels.
@@ -196,19 +204,19 @@ class QmxGraphApi(object):
             in a relative position to the cell with id `parent_id`.
         :param Optional[str] id: The id of the table. If omitted (or non
             unique) an id is generated.
-        :rtype: str
-        :return: Id of new table.
         """
         from . import decoration_contents
         contents = decoration_contents.asdict(contents)
         return self.call_api(
-            'insertTable', x, y, width, contents, title, tags, style,
-            parent_id, id)
+            result_callback, 'insertTable', x, y, width, contents, title,
+            tags, style, parent_id, id)
 
-    def update_table(self, table_id, contents, title):
+    def update_table(self, result_callback, table_id, contents, title):
         """
         Update contents and title of a table in graph.
 
+        :param Callable[[Any],None] result_callback: This is called after the
+            underlying method executes.
         :param str table_id: Id of a table in graph.
         :param qmxgraph.decoration_contents.Table contents:
             The table contents.
@@ -216,89 +224,108 @@ class QmxGraphApi(object):
         """
         from . import decoration_contents
         contents = decoration_contents.asdict(contents)
-        return self.call_api('updateTable', table_id, contents, title)
+        return self.call_api(
+            result_callback, 'updateTable', table_id, contents, title)
 
-    def group(self):
+    def group(self, result_callback):
         """
         Create a group with currently selected cells in graph. Edges connected
         between selected vertices are automatically also included in group.
-        """
-        return self.call_api('group')
 
-    def ungroup(self):
+        :param Callable[[Any],None] result_callback: This is called after the
+            underlying method executes.
+        """
+        return self.call_api(result_callback, 'group')
+
+    def ungroup(self, result_callback):
         """
         Ungroup currently selected group.
-        """
-        return self.call_api('ungroup')
 
-    def toggle_outline(self):
+        :param Callable[[Any],None] result_callback: This is called after the
+            underlying method executes.
+        """
+        return self.call_api(result_callback, 'ungroup')
+
+    def toggle_outline(self, result_callback):
         """
         Outline is a small window that shows an overview of graph. It usually
         starts disabled and can be shown on demand.
-        """
-        return self.call_api('toggleOutline')
 
-    def toggle_grid(self):
+        :param Callable[[Any],None] result_callback: This is called after the
+            underlying method executes.
+        """
+        return self.call_api(result_callback, 'toggleOutline')
+
+    def toggle_grid(self, result_callback):
         """
         The grid in background of graph helps aligning cells inside graph. It
         usually starts enabled and can be hidden on demand.
-        """
-        return self.call_api('toggleGrid')
 
-    def toggle_snap(self):
+        :param Callable[[Any],None] result_callback: This is called after the
+            underlying method executes.
+        """
+        return self.call_api(result_callback, 'toggleGrid')
+
+    def toggle_snap(self, result_callback):
         """
         Snap feature forces vertices to be moved in a way its bounds match
         grid. It usually starts enabled and can be disabled on demand.
 
         Note that if grid is hidden this feature is also disabled.
-        """
-        return self.call_api('toggleSnap')
 
-    def get_cell_id_at(self, x, y):
+        :param Callable[[Any],None] result_callback: This is called after the
+            underlying method executes.
+        """
+        return self.call_api(result_callback, 'toggleSnap')
+
+    def get_cell_id_at(self, result_callback, x, y):
         """
         Gets the id of cell at given coordinates.
 
+        :param Callable[[Optional[str]],None] result_callback: This callback
+            receives id of cell at given position, if no cell is found None.
         :param int x: X coordinate in screen coordinates.
         :param int y: Y coordinate in screen coordinates.
-        :rtype: str|None
-        :return: Id of cell if any given position, otherwise returns None.
         """
-        return self.call_api('getCellIdAt', x, y)
+        return self.call_api(result_callback, 'getCellIdAt', x, y)
 
-    def get_decoration_parent_cell_id(self, cell_id):
+    def get_decoration_parent_cell_id(self, result_callback, cell_id):
         """
         Get the id of the edge that contains the decoration with the given
         cell id.
 
+        :param Callable[[str],None] result_callback: This callback receives
+            the id of the edge containing the given decoration.
         :param str cell_id: THe decoration's id.
-        :rtype: str
-        :return: Id of the edge containg the given decoration.
         """
-        return self.call_api('getDecorationParentCellId', cell_id)
+        return self.call_api(
+            result_callback, 'getDecorationParentCellId', cell_id)
 
-    def has_cell(self, cell_id):
+    def has_cell(self, result_callback, cell_id):
         """
         Indicates if cell exists.
 
+        :param Callable[[bool],None] result_callback: This callback receives a
+            boolean indication in the cell exists.
         :param str cell_id: Id of a cell in graph.
-        :rtype: bool
-        :return: True if cell exists.
         """
-        return self.call_api('hasCell', cell_id)
+        return self.call_api(result_callback, 'hasCell', cell_id)
 
-    def has_port(self, cell_id, port_name):
+    def has_port(self, result_callback, cell_id, port_name):
         """
         Indicates if the port exists.
 
+        :param Callable[[bool],None] result_callback: This callback receives a
+            boolean indication in the port exists.
         :param str cell_id: Id of a cell in graph.
         :param str port_name: Name of the expected port.
-        :rtype: bool
-        :return: True if the port exists.
         """
-        return self.call_api('hasPort', cell_id, port_name)
+        return self.call_api(result_callback, 'hasPort', cell_id, port_name)
 
-    def get_cell_type(self, cell_id):
+    def get_cell_type(self, result_callback, cell_id):
         """
+        :param Callable[[str],None] result_callback: This callback receives a
+            boolean indication in the port exists.
         :param str cell_id: Id of a cell in graph.
         :rtype: str
         :return: Possible returns are:
@@ -310,31 +337,31 @@ class QmxGraphApi(object):
 
             It raises if none of these types are a match.
         """
-        return self.call_api('getCellType', cell_id)
+        return self.call_api(result_callback, 'getCellType', cell_id)
 
-    def get_geometry(self, cell_id):
+    def get_geometry(self, result_callback, cell_id):
         """
         Gets the geometry of cell in screen coordinates.
 
-        :param str cell_id: Id of a cell in graph.
-        :rtype: list
-        :return: A list with 4 items:
+        :param Callable[[List[float]],None] result_callback: This callback
+            receives cell geometry data as 4 floats:
 
             - x;
             - y;
             - width;
             - height;
 
+        :param str cell_id: Id of a cell in graph.
         """
-        return self.call_api('getGeometry', cell_id)
+        return self.call_api(result_callback, 'getGeometry', cell_id)
 
-    def get_terminal_points(self, cell_id):
+    def get_terminal_points(self, result_callback, cell_id):
         """
         Gets the terminal points of an edge;
 
-        :param str cell_id: Id of a edge in graph.
-        :rtype: list
-        :return: 2 lists with 2 items each:
+        :param Callable[[List[List[float]]],None] result_callback:
+            This callback receives cell terminal coordinates a list of two
+            list and 2 float each list:
 
             - - the source x coordinate;
               - the source y coordinate;
@@ -342,48 +369,58 @@ class QmxGraphApi(object):
             - - the target x coordinate;
               - the target y coordinate;
 
+        :param str cell_id: Id of a edge in graph.
         """
-        return self.call_api('getEdgeTerminalPoints', cell_id)
+        return self.call_api(result_callback, 'getEdgeTerminalPoints', cell_id)
 
-    def get_decoration_position(self, cell_id):
+    def get_decoration_position(self, result_callback, cell_id):
         """
         Gets the decoration's relative position.
 
+        :param Callable[[float],None] result_callback: This callback receives a
+            normalized number between [0, 1] representing the position of the
+            decoration along the parent edge terminal.
         :param str cell_id: Id of a decoration in graph.
         :rtype: float
         :return: Returns an a normalized number between [0, 1] representing
             the position of the decoration along the parent edge.
         """
-        return self.call_api('getDecorationPosition', cell_id)
+        return self.call_api(result_callback, 'getDecorationPosition', cell_id)
 
-    def set_decoration_position(self, cell_id, position):
+    def set_decoration_position(self, result_callback, cell_id, position):
         """
         Gets the decoration's relative position.
 
+        :param Callable[[Any],None] result_callback: This is called after the
+            underlying method executes.
         :param str cell_id: Id of a decoration in graph.
         :param float position: A normalized number between [0, 1] representing
             the position of the decoration along the parent edge.
         """
-        return self.call_api('setDecorationPosition', cell_id, position)
+        return self.call_api(result_callback, 'setDecorationPosition', cell_id, position)
 
-    def set_visible(self, cell_id, visible):
+    def set_visible(self, result_callback, cell_id, visible):
         """
         Change visibility state of cell.
 
+        :param Callable[[Any],None] result_callback: This is called after the
+            underlying method executes.
         :param str cell_id: Id of a cell in graph.
         :param bool visible: If visible or not.
         """
-        return self.call_api('setVisible', cell_id, visible)
+        return self.call_api(result_callback, 'setVisible', cell_id, visible)
 
-    def is_visible(self, cell_id):
+    def is_visible(self, result_callback, cell_id):
         """
         Indicates the cell's visibility.
 
+        :param Callable[[bool],None] result_callback: This callback receives a
+            flag indicating the cell's visibility.
         :param str cell_id: Id of a cell in graph.
         """
-        return self.call_api('isVisible', cell_id)
+        return self.call_api(result_callback, 'isVisible', cell_id)
 
-    def set_port_visible(self, cell_id, port_name, visible):
+    def set_port_visible(self, result_callback, cell_id, port_name, visible):
         """
         Change visibility state of cell's port.
 
@@ -391,67 +428,67 @@ class QmxGraphApi(object):
         :param str port_name: Name of a port in the cell.
         :param bool visible: If visible or not.
         """
-        return self.call_api('setPortVisible', cell_id, port_name, visible)
+        return self.call_api(result_callback, 'setPortVisible', cell_id, port_name, visible)
 
-    def is_port_visible(self, cell_id, port_name):
+    def is_port_visible(self, result_callback, cell_id, port_name):
         """
         Indicates the cell's visibility.
 
         :param str cell_id: Id of a cell in graph.
         :param bool port_name: Name of a port in the cell.
         """
-        return self.call_api('isPortVisible', cell_id, port_name)
+        return self.call_api(result_callback, 'isPortVisible', cell_id, port_name)
 
-    def set_connectable(self, cell_id, connectable):
+    def set_connectable(self, result_callback, cell_id, connectable):
         """
         Change connectable state of a cell.
 
         :param str cell_id: Id of a cell in graph.
         :param bool connectable: If connectable or not.
         """
-        self.call_api('setConnectable', cell_id, connectable)
+        return self.call_api(result_callback, 'setConnectable', cell_id, connectable)
 
-    def is_connectable(self, cell_id):
+    def is_connectable(self, result_callback, cell_id):
         """
         Indicates the cell's connectivity.
 
         :param str cell_id: Id of a cell in graph.
         """
-        return self.call_api('isConnectable', cell_id)
+        return self.call_api(result_callback, 'isConnectable', cell_id)
 
-    def zoom_in(self):
+    def zoom_in(self, result_callback):
         """
         Zoom in the graph.
         """
-        return self.call_api('zoomIn')
+        return self.call_api(result_callback, 'zoomIn')
 
-    def zoom_out(self):
+    def zoom_out(self, result_callback):
         """
         Zoom out the graph.
         """
-        return self.call_api('zoomOut')
+        return self.call_api(result_callback, 'zoomOut')
 
-    def reset_zoom(self):
+    def reset_zoom(self, result_callback):
         """
         Reset graph's zoom.
         """
-        return self.call_api('resetZoom')
+        return self.call_api(result_callback, 'resetZoom')
 
-    def fit(self):
+    def fit(self, result_callback):
         """
         Rescale the graph to fit in the container.
         """
-        return self.call_api('fit')
+        return self.call_api(result_callback, 'fit')
 
-    def get_zoom_scale(self):
+    def get_zoom_scale(self, result_callback):
         """
         Return the current scale (zoom).
 
         :rtype: float
         """
-        return self.call_api('getZoomScale')
+        return self.call_api(result_callback, 'getZoomScale')
 
-    def get_scale_and_translation(self):
+    def get_scale_and_translation(self, result_callback):
         """
         Get the current scale and translation.
 
@@ -466,9 +503,9 @@ class QmxGraphApi(object):
             supplied to :func:`QmxGraphApi.set_scale_and_translation` to
             set the scale and translation to a previous value.
         """
-        return tuple(self.call_api('getScaleAndTranslation'))
+        return self.call_api(result_callback, 'getScaleAndTranslation')
 
-    def set_scale_and_translation(self, scale, x, y):
+    def set_scale_and_translation(self, result_callback, scale, x, y):
         """
         Set the scale and translation.
 
@@ -477,33 +514,33 @@ class QmxGraphApi(object):
             (0 = origin).
         :param float y: The new graph's scale along the Y axis (0 = origin}.
         """
-        return self.call_api('setScaleAndTranslation', scale, x, y)
+        return self.call_api(result_callback, 'setScaleAndTranslation', scale, x, y)
 
-    def set_selected_cells(self, cell_ids):
+    def set_selected_cells(self, result_callback, cell_ids):
         """
         Select the cells with the given ids.
 
         :param list[str] cell_ids:
         """
-        return self.call_api('setSelectedCells', cell_ids)
+        return self.call_api(result_callback, 'setSelectedCells', cell_ids)
 
-    def get_selected_cells(self):
+    def get_selected_cells(self, result_callback):
         """
         Get the selected cells ids.
 
         :rtype: list[str]
         """
-        return self.call_api('getSelectedCells')
+        return self.call_api(result_callback, 'getSelectedCells')
 
-    def remove_cells(self, cell_ids):
+    def remove_cells(self, result_callback, cell_ids):
         """
         Remove cells from graph.
 
         :param list cell_ids: Ids of cells that must be removed.
         """
-        return self.call_api('removeCells', cell_ids)
+        return self.call_api(result_callback, 'removeCells', cell_ids)
 
-    def remove_port(self, vertex_id, port_name):
+    def remove_port(self, result_callback, vertex_id, port_name):
         """
         Remove an existing port from a vertex. Any edge connected to the
         vertex through the port is also removed.
@@ -511,9 +548,9 @@ class QmxGraphApi(object):
         :param str vertex_id: The id of the parent vertex.
         :param str port_name: The port's name to remove.
         """
-        return self.call_api('removePort', vertex_id, port_name)
+        return self.call_api(result_callback, 'removePort', vertex_id, port_name)
 
-    def set_double_click_handler(self, handler):
+    def set_double_click_handler(self, result_callback, handler):
         """
         Set the handler used for double click in cells of graph.
 
@@ -529,9 +566,9 @@ class QmxGraphApi(object):
             str with double clicked cell id as only argument.
         """
         return self.call_api(
-            'setDoubleClickHandler', qmxgraph.js.Variable(handler))
+            result_callback, 'setDoubleClickHandler', qmxgraph.js.Variable(handler))
 
-    def set_popup_menu_handler(self, handler):
+    def set_popup_menu_handler(self, result_callback, handler):
         """
         Set the handler used for popup menu (i.e. menu triggered by right
         click) in cells of graph.
@@ -550,9 +587,9 @@ class QmxGraphApi(object):
             three arguments.
         """
         return self.call_api(
-            'setPopupMenuHandler', qmxgraph.js.Variable(handler))
+            result_callback, 'setPopupMenuHandler', qmxgraph.js.Variable(handler))
 
-    def on_label_changed(self, handler):
+    def on_label_changed(self, result_callback, handler):
         """
         Register a handler to event when label of a cell changes in graph.
 
@@ -563,9 +600,9 @@ class QmxGraphApi(object):
             respectively, cell id, new label and old label as arguments.
         """
         return self.call_api(
-            'onLabelChanged', qmxgraph.js.Variable(handler))
+            result_callback, 'onLabelChanged', qmxgraph.js.Variable(handler))
 
-    def on_cells_added(self, handler):
+    def on_cells_added(self, result_callback, handler):
         """
         Register a handler to event when cells are added from graph.
 
@@ -575,9 +612,9 @@ class QmxGraphApi(object):
             object that is going to be used as callback to event. Receives a
             `QVariantList` of added cell ids as only argument.
         """
-        return self.call_api('onCellsAdded', qmxgraph.js.Variable(handler))
+        return self.call_api(result_callback, 'onCellsAdded', qmxgraph.js.Variable(handler))
 
-    def on_cells_removed(self, handler):
+    def on_cells_removed(self, result_callback, handler):
         """
         Register a handler to event when cells are removed from graph.
 
@@ -587,9 +624,9 @@ class QmxGraphApi(object):
             object that is going to be used as callback to event. Receives a
             `QVariantList` of removed cell ids as only argument.
         """
-        return self.call_api('onCellsRemoved', qmxgraph.js.Variable(handler))
+        return self.call_api(result_callback, 'onCellsRemoved', qmxgraph.js.Variable(handler))
 
-    def on_selection_changed(self, handler):
+    def on_selection_changed(self, result_callback, handler):
         """
         Add function to handle selection change events in the graph.
 
@@ -598,9 +635,9 @@ class QmxGraphApi(object):
             str with selected cells ids as only argument.
         """
         return self.call_api(
-            'onSelectionChanged', qmxgraph.js.Variable(handler))
+            result_callback, 'onSelectionChanged', qmxgraph.js.Variable(handler))
 
-    def on_terminal_changed(self, handler):
+    def on_terminal_changed(self, result_callback, handler):
         """
         Add function to handle terminal change events in the graph.
 
@@ -611,9 +648,9 @@ class QmxGraphApi(object):
             terminal.
         """
         return self.call_api(
-            'onTerminalChanged', qmxgraph.js.Variable(handler))
+            result_callback, 'onTerminalChanged', qmxgraph.js.Variable(handler))
 
-    def on_terminal_with_port_changed(self, handler):
+    def on_terminal_with_port_changed(self, result_callback, handler):
         """
         Add function to handle terminal change with port info events in
         the graph.
@@ -625,9 +662,9 @@ class QmxGraphApi(object):
             id of the old terminal.
         """
         return self.call_api(
-            'onTerminalWithPortChanged', qmxgraph.js.Variable(handler))
+            result_callback, 'onTerminalWithPortChanged', qmxgraph.js.Variable(handler))
 
-    def on_view_update(self, handler):
+    def on_view_update(self, result_callback, handler):
         """
         Add function to handle updates in the graph view.
         :param handler: Name of signal bound to JavaScript by a bridge object
@@ -635,9 +672,9 @@ class QmxGraphApi(object):
             respectively, graph dump and graph scale and translation.
         """
         return self.call_api(
-            'onViewUpdate', qmxgraph.js.Variable(handler))
+            result_callback, 'onViewUpdate', qmxgraph.js.Variable(handler))
 
-    def on_cells_bounds_changed(self, handler):
+    def on_cells_bounds_changed(self, result_callback, handler):
         """
         Add function to handle updates in the graph view.
         :param handler: Name of signal bound to JavaScript by a bridge
@@ -645,9 +682,9 @@ class QmxGraphApi(object):
             a map of cell id to a map describing the cell bounds.
 
         """
-        return self.call_api('onBoundsChanged', qmxgraph.js.Variable(handler))
+        return self.call_api(result_callback, 'onBoundsChanged', qmxgraph.js.Variable(handler))
 
-    def resize_container(self, width, height):
+    def resize_container(self, result_callback, width, height):
         """
         Resizes the container of graph drawing widget.
 
@@ -659,9 +696,9 @@ class QmxGraphApi(object):
         :param int width: New width.
         :param int height: New height.
         """
-        return self.call_api('resizeContainer', width, height)
+        return self.call_api(result_callback, 'resizeContainer', width, height)
 
-    def get_label(self, cell_id):
+    def get_label(self, result_callback, cell_id):
         """
         Gets the label of cell.
 
@@ -669,27 +706,27 @@ class QmxGraphApi(object):
         :rtype: str
         :return: Label of cell.
         """
-        return self.call_api('getLabel', cell_id)
+        return self.call_api(result_callback, 'getLabel', cell_id)
 
-    def set_label(self, cell_id, label):
+    def set_label(self, result_callback, cell_id, label):
         """
         Sets the label of a cell.
 
         :param str cell_id: Id of a cell in graph.
         :param str label: New label.
         """
-        return self.call_api('setLabel', cell_id, label)
+        return self.call_api(result_callback, 'setLabel', cell_id, label)
 
-    def set_style(self, cell_id, style):
+    def set_style(self, result_callback, cell_id, style):
         """
         Sets a cell's style.
 
         :param str cell_id: Id of a cell in graph.
         :param str style: Name of a style or an inline style.
         """
-        return self.call_api('setStyle', cell_id, style)
+        return self.call_api(result_callback, 'setStyle', cell_id, style)
 
-    def get_style(self, cell_id):
+    def get_style(self, result_callback, cell_id):
         """
         Gets a cell's style.
 
@@ -697,9 +734,9 @@ class QmxGraphApi(object):
         :rtype: str
         :return: Name of a style or an inline style.
         """
-        return self.call_api('getStyle', cell_id)
+        return self.call_api(result_callback, 'getStyle', cell_id)
 
-    def set_tag(self, cell_id, tag_name, tag_value):
+    def set_tag(self, result_callback, cell_id, tag_name, tag_value):
         """
         Sets a tag in cell.
 
@@ -707,9 +744,9 @@ class QmxGraphApi(object):
         :param str tag_name: Name of tag.
         :param str tag_value: Value of tag.
         """
-        return self.call_api('setTag', cell_id, tag_name, tag_value)
+        return self.call_api(result_callback, 'setTag', cell_id, tag_name, tag_value)
 
-    def get_tag(self, cell_id, tag_name):
+    def get_tag(self, result_callback, cell_id, tag_name):
         """
         Gets value of a value in cell.
 
@@ -718,9 +755,9 @@ class QmxGraphApi(object):
         :rtype: str
         :return: Value of tag.
         """
-        return self.call_api('getTag', cell_id, tag_name)
+        return self.call_api(result_callback, 'getTag', cell_id, tag_name)
 
-    def has_tag(self, cell_id, tag_name):
+    def has_tag(self, result_callback, cell_id, tag_name):
         """
         If cell has tag.
 
@@ -729,9 +766,9 @@ class QmxGraphApi(object):
         :rtype: bool
         :return: True if tag exists in cell.
         """
-        return self.call_api('hasTag', cell_id, tag_name)
+        return self.call_api(result_callback, 'hasTag', cell_id, tag_name)
 
-    def get_edge_terminals(self, edge_id):
+    def get_edge_terminals(self, result_callback, edge_id):
         """
         Gets the ids of endpoint vertices of an edge.
 
@@ -740,9 +777,9 @@ class QmxGraphApi(object):
         :return: A list with 2 items, first the source vertex id and second
             the target vertex id.
         """
-        return self.call_api('getEdgeTerminals', edge_id)
+        return self.call_api(result_callback, 'getEdgeTerminals', edge_id)
 
-    def get_edge_terminals_with_ports(self, edge_id):
+    def get_edge_terminals_with_ports(self, result_callback, edge_id):
         """
         Gets the ids of endpoint vertices of an edge and the ports used in the
         connection.
@@ -758,9 +795,9 @@ class QmxGraphApi(object):
               - the port's name used on the target (can be `None`);
 
         """
-        return self.call_api('getEdgeTerminalsWithPorts', edge_id)
+        return self.call_api(result_callback, 'getEdgeTerminalsWithPorts', edge_id)
 
-    def set_edge_terminal(self, edge_id, terminal_type, new_terminal_cell_id,
+    def set_edge_terminal(self, result_callback, edge_id, terminal_type, new_terminal_cell_id,
                           port_name=None):
         """
         Set an edge's terminal.
@@ -782,10 +819,10 @@ class QmxGraphApi(object):
             raise ValueError(err_msg % (terminal_type,))
 
         return self.call_api(
-            'setEdgeTerminal', edge_id, terminal_type, new_terminal_cell_id,
+            result_callback, 'setEdgeTerminal', edge_id, terminal_type, new_terminal_cell_id,
             port_name)
 
-    def get_cell_bounds(self, cell_id):
+    def get_cell_bounds(self, result_callback, cell_id):
         """
         Set an cell's geometry. If some argument is omitted (or `None`) that
         geometry's characteristic is not affected.
@@ -794,10 +831,13 @@ class QmxGraphApi(object):
         :rtype: qmxgraph.cell_bounds.CellBounds
         """
         from qmxgraph.cell_bounds import CellBounds
-        cell_bounds = self.call_api('getCellBounds', cell_id)
-        return CellBounds(**cell_bounds)
 
-    def set_cell_bounds(self, cell_id, cell_bounds):
+        def DictToCellBoundCallback(cell_bounds_as_dict):
+            result_callback(CellBounds(**cell_bounds_as_dict))
+
+        return self.call_api(DictToCellBoundCallback, 'getCellBounds', cell_id)
+
+    def set_cell_bounds(self, result_callback, cell_id, cell_bounds):
         """
         Set an cell's geometry. If some argument is omitted (or `None`) that
         geometry's characteristic is not affected.
@@ -806,9 +846,9 @@ class QmxGraphApi(object):
         :param qmxgraph.cell_bounds.CellBounds cell_bounds: The cell bounds to apply.
         """
         from qmxgraph.cell_bounds import asdict
-        return self.call_api('setCellBounds', cell_id, asdict(cell_bounds))
+        return self.call_api(result_callback, 'setCellBounds', cell_id, asdict(cell_bounds))
 
-    def dump(self):
+    def dump(self, result_callback):
         """
         Obtain a representation of the current state of the graph as an XML
         string. The state can be restored calling :func:`QmxGraphApi.restore`.
@@ -816,74 +856,93 @@ class QmxGraphApi(object):
         :rtype: str
         :return: A xml string.
         """
-        return self.call_api('dump')
+        return self.call_api(result_callback, 'dump')
 
-    def restore(self, state):
+    def restore(self, result_callback, state):
         """
         Restore the graph's state to one saved with `dump`.
 
         :param str state: A xml string previously obtained with `dump`.
         """
-        return self.call_api('restore', state)
+        return self.call_api(result_callback, 'restore', state)
 
-    def set_cells_deletable(self, enabled):
-        self.call_api('setCellsDeletable', enabled)
+    def set_cells_deletable(self, result_callback, enabled):
+        return self.call_api(result_callback, 'setCellsDeletable', enabled)
 
-    def is_cells_deletable(self):
-        return self.call_api('isCellsDeletable')
+    def is_cells_deletable(self, result_callback):
+        return self.call_api(result_callback, 'isCellsDeletable')
 
-    def set_cells_disconnectable(self, enabled):
-        self.call_api('setCellsDisconnectable', enabled)
+    def set_cells_disconnectable(self, result_callback, enabled):
+        return self.call_api(result_callback, 'setCellsDisconnectable', enabled)
 
-    def is_cells_disconnectable(self):
-        return self.call_api('isCellsDisconnectable')
+    def is_cells_disconnectable(self, result_callback):
+        return self.call_api(result_callback, 'isCellsDisconnectable')
 
-    def set_cells_editable(self, enabled):
-        self.call_api('setCellsEditable', enabled)
+    def set_cells_editable(self, result_callback, enabled):
+        return self.call_api(result_callback, 'setCellsEditable', enabled)
 
-    def is_cells_editable(self):
-        return self.call_api('isCellsEditable')
+    def is_cells_editable(self, result_callback):
+        return self.call_api(result_callback, 'isCellsEditable')
 
-    def set_cells_movable(self, enabled):
-        self.call_api('setCellsMovable', enabled)
+    def set_cells_movable(self, result_callback, enabled):
+        return self.call_api(result_callback, 'setCellsMovable', enabled)
 
-    def is_cells_movable(self):
-        return self.call_api('isCellsMovable')
+    def is_cells_movable(self, result_callback):
+        return self.call_api(result_callback, 'isCellsMovable')
 
-    def set_cells_connectable(self, enabled):
-        self.call_api('setCellsConnectable', enabled)
+    def set_cells_connectable(self, result_callback, enabled):
+        return self.call_api(result_callback, 'setCellsConnectable', enabled)
 
-    def is_cells_connectable(self):
-        return self.call_api('isCellsConnectable')
+    def is_cells_connectable(self, result_callback):
+        return self.call_api(result_callback, 'isCellsConnectable')
 
-    def run_layout(self, layout_name):
-        return self.call_api('runLayout', layout_name)
+    def run_layout(self, result_callback, layout_name):
+        return self.call_api(result_callback, 'runLayout', layout_name)
 
-    def call_api(self, fn, *args):
+    def call_api(self, result_callback, fn, *args):
         """
         Call a function in underlying API provided by JavaScript graph.
 
+        :param Callable[Any,None] result_callback: This call receives the
+            result from the execution.
         :param str fn: A function call available in API.
         :param list[Any] args: Positional arguments passed to graph's
             JavaScript API call (unfortunately can't use named arguments
             with JavaScript). All object passed must be JSON encodable or
             Variable instances.
-        :rtype: object
-        :return: Return of API call.
         """
-        graph = self._graph()
-        eval_js = graph.inner_web_view().eval_js
         if qmxgraph.debug.is_qmxgraph_debug_enabled():
-            # Healthy check as if function didn't exist it just returns None,
-            # giving the impression that might have worked
-            if not graph.is_loaded():
+            self.call_api_debug(result_callback, fn, *args)
+        else:
+            graph = self._graph()
+            eval_js = graph.inner_web_view().eval_js
+            call = qmxgraph.js.prepare_js_call(fn, *args)
+            eval_js(result_callback, "api.{}".format(call))
+        return result_callback
+
+    def call_api_debug(self, result_callback, fn, *args):
+
+        def check_is_loaded(is_loaded):
+            if is_loaded:
+                eval_js(
+                    check_function_exist,
+                    "(typeof api !== 'undefined') && !!api.{}".format(fn),
+                )
+            else:
                 raise qmxgraph.js.InvalidJavaScriptError(
                     "Because graph is unloaded can't call the JavaScript API."
                 )
-            if eval_js("(typeof api === 'undefined') || !api.{}".format(fn)):
+
+        def check_function_exist(function_exist):
+            if function_exist:
+                call = qmxgraph.js.prepare_js_call(fn, *args)
+                eval_js(result_callback, "api.{}".format(call))
+            else:
                 raise qmxgraph.js.InvalidJavaScriptError(
                     'Unable to find function "{}" in QmxGraph '
-                    'JavaScript API'.format(fn))
+                    'JavaScript API'.format(fn)
+                )
 
-        call = qmxgraph.js.prepare_js_call(fn, *args)
-        return eval_js("api.{}".format(call))
+        graph = self._graph()
+        eval_js = graph.inner_web_view().eval_js
+        graph.is_loaded(check_is_loaded)

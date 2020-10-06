@@ -29,19 +29,21 @@ def get_cell_ids(widget: QmxGraph, filter_function: str) -> List[str]:
         return a boolean (`true` select the cell, `false` ignore the cell).
     :return: A list with the id's of the selected cells.
     """
-    cells_ids = widget.inner_web_view().eval_js(
-        f'''
-        (function(){{
-            var all_cells = api._graphEditor.graph.model.cells;
-            var cells = Object.keys(all_cells).map(
-                function(id){{ return all_cells[id]; }}
-            );
-
-            cells = cells.filter({filter_function});
-            return cells.map(function(aCell){{ return aCell.getId(); }});
-        }})()'''
-    )
-    return cast(List[str], cells_ids)
+    with CallbackBlocker() as cb:
+        widget.inner_web_view().eval_js(
+            cb,
+            f'''
+            (function(){{
+                var all_cells = api._graphEditor.graph.model.cells;
+                var cells = Object.keys(all_cells).map(
+                    function(id){{ return all_cells[id]; }}
+                );
+    
+                cells = cells.filter({filter_function});
+                return cells.map(function(aCell){{ return aCell.getId(); }});
+            }})()'''
+        )
+    return cast(List[str], cb.args[0])
 
 
 @contextmanager
