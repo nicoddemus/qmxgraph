@@ -4,6 +4,7 @@ This is similar to the hello world sample.
 """
 
 import sys
+from functools import partial
 
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QSize
@@ -105,11 +106,17 @@ class DragAndDropWindow(QMainWindow):
         # Based in `EventsBridge` docstring.
 
         def on_cells_added_handler(cell_ids):
+
+            def update_cell_label(current_label, *, cell_id):
+                qmx.set_label(noop, cell_id, f'{current_label} ({cell_id})')
+
             print(f'added {cell_ids}')
             qmx = widget.api
             for cid in cell_ids:
-                label = qmx.get_label(cid)
-                qmx.set_label(cid, f'{label} ({cid})')
+                qmx.get_label(
+                    partial(update_cell_label, cell_id=cid),
+                    cid,
+                )
 
         def on_terminal_changed_handler(
             cell_id, terminal_type, new_terminal_id, old_terminal_id
@@ -141,6 +148,10 @@ class DragAndDropWindow(QMainWindow):
 
     def graph_load_handler(self, is_loaded):
         self.button_pane.setEnabled(is_loaded)
+
+
+def noop(v):
+    pass
 
 
 if __name__ == "__main__":

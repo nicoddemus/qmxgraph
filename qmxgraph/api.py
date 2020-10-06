@@ -835,7 +835,8 @@ class QmxGraphApi(object):
         def DictToCellBoundCallback(cell_bounds_as_dict):
             result_callback(CellBounds(**cell_bounds_as_dict))
 
-        return self.call_api(DictToCellBoundCallback, 'getCellBounds', cell_id)
+        self.call_api(DictToCellBoundCallback, 'getCellBounds', cell_id)
+        return result_callback
 
     def set_cell_bounds(self, result_callback, cell_id, cell_bounds):
         """
@@ -906,7 +907,7 @@ class QmxGraphApi(object):
         :param Callable[Any,None] result_callback: This call receives the
             result from the execution.
         :param str fn: A function call available in API.
-        :param list[Any] args: Positional arguments passed to graph's
+        :param Any args: Positional arguments passed to graph's
             JavaScript API call (unfortunately can't use named arguments
             with JavaScript). All object passed must be JSON encodable or
             Variable instances.

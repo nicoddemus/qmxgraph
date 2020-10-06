@@ -43,32 +43,37 @@ class StyleWindow(QMainWindow):
     def graph_load_handler(self, is_loaded):
         assert is_loaded
         qmx = self.graph_widget.api
-        v0_id = qmx.insert_vertex(
-            x=100, y=100, width=50, height=50, label="AAA"
+        qmx.insert_vertex(
+            ignore_result,
+            x=100, y=100,
+            width=50, height=50,
+            label="AAA", id='v0',
         )
         # Style by configured style name.
-        v1_id = qmx.insert_vertex(
-            x=400,
-            y=100,
-            width=100,
-            height=50,
-            label="BBB",
-            style='round_node',
+        qmx.insert_vertex(
+            ignore_result,
+            x=400, y=100,
+            width=100, height=50,
+            label="BBB", style='round_node', id='v1',
         )
         # Style by explicit values.
         v2_id = qmx.insert_vertex(
-            x=200,
-            y=300,
-            width=50,
-            height=100,
-            label="CCC",
-            style='fillColor=#8D8',
+            ignore_result,
+            x=200, y=300,
+            width=50, height=100,
+            label="CCC", style='fillColor=#8D8', id='v2',
         )
 
-        qmx.insert_edge(source_id=v0_id, target_id=v1_id, label='normal')
         qmx.insert_edge(
-            source_id=v1_id, target_id=v2_id, label='bold', style='bold_edge'
+            ignore_result, source_id='v0', target_id='v1', label='normal'
         )
+        qmx.insert_edge(
+            ignore_result, source_id='v1', target_id='v2', label='bold', style='bold_edge'
+        )
+
+
+def ignore_result(v):
+    pass
 
 
 if __name__ == "__main__":
