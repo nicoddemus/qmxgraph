@@ -517,12 +517,18 @@ class QmxGraph(QWidget):
 def _make_async_pyqt_slot(slot_name, signal_name, parameters):
 
     def async_slot(self, *args):
-        signal = getattr(self, signal_name)
+
+        def emit_signal():
+            import sip
+            if not sip.isdeleted(self):
+                signal = getattr(self, signal_name)
+                signal.emit(*args)
+
         convert_args = getattr(
             self, f'js_to_py_args_{signal_name}', lambda x: x,
         )
         args = convert_args(args)
-        QTimer.singleShot(1, lambda: signal.emit(*args))
+        QTimer.singleShot(1, emit_signal)
 
     return pyqtSlot(*parameters, name=slot_name)(async_slot)
 
