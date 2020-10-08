@@ -1,5 +1,5 @@
 # Heavily based on `pytestqt.wait_signal.CallbackBlocker`.
-from typing import Any, Callable, Optional, Hashable
+from typing import Any, Callable, Optional, Hashable, Dict
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSignal
@@ -135,16 +135,17 @@ class CallbackBarrier:
     """
 
     class StoredResult:
-        def __init__(self, parent):
+        def __init__(self, parent, key):
             # Create a cycle with the parent to prevent the parent collection
             # because parent hold barrier logic.
             self._parent = parent
+            self._key = repr(key)
             self._value = None
             self._called = False
 
         @property
         def value(self) -> Optional[Any]:
-            assert self._called
+            assert self._called, f'stored results key: {self._key}'
             return self._value
 
         def __call__(self, value: Optional[Any]) -> None:
@@ -156,16 +157,18 @@ class CallbackBarrier:
             self._parent(value)
             self._parent = None  # Break the cycle.
 
-    def __init__(
-        self, to_execute_after_barrier: Callable, pass_self: bool = False
-    ):
+    def __init__(self):
         self._waiting_on_barrier = False
         self._crossed = False
         self._calls_pending = 0
-        self._stored_results = {}
+        self._stored_results: Dict[Hashable, CallbackBarrier.StoredResult] = {}
 
-        self._to_execute_after_barrier = to_execute_after_barrier
-        self._pass_self = pass_self
+        self._to_execute_after_barrier = []
+
+    def register(self, to_call, pass_self=False):
+        self._to_execute_after_barrier.append((to_call, pass_self))
+        if self._crossed:
+            self._cross_barrier()
 
     def create_stored_result_callback(
         self, key: Hashable
@@ -178,7 +181,7 @@ class CallbackBarrier:
             raise ValueError(
                 'stored result "key" already in use ("key"s should be unique)'
             )
-        stored_result = self.StoredResult(self)
+        stored_result = self.StoredResult(self, key)
         self.increment()
         self._stored_results[key] = stored_result
         return stored_result
@@ -188,6 +191,9 @@ class CallbackBarrier:
             return self._stored_results[item]
         else:
             return self.create_stored_result_callback(item)
+
+    def get_result(self, key: Hashable) -> Optional[Any]:
+        return self._stored_results[key].value
 
     def increment(self, n: int = 1) -> None:
         """
@@ -223,12 +229,13 @@ class CallbackBarrier:
         self._crossed = True
         self._waiting_on_barrier = False
 
-        to_call = self._to_execute_after_barrier
-        self._to_execute_after_barrier = None
-        if self._pass_self:
-            to_call(self)
-        else:
-            to_call()
+        to_execute_after_barrier = self._to_execute_after_barrier
+        self._to_execute_after_barrier = []
+        for to_call, pass_self in to_execute_after_barrier:
+            if pass_self:
+                to_call(self)
+            else:
+                to_call()
 
     def __call__(self, *args: Optional[Any], **kwargs: Optional[Any]) -> None:
         if self._crossed:

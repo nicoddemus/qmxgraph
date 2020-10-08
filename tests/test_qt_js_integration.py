@@ -11,7 +11,7 @@ import qmxgraph.constants
 import qmxgraph.js
 import qmxgraph.mime
 from qmxgraph.callback_blocker import CallbackBlocker, silent_disconnect, CallbackBarrier
-from qmxgraph.common_testing import wait_signals
+from qmxgraph.common_testing import wait_signals, CB
 from qmxgraph.widget import EventsBridge
 
 
@@ -84,7 +84,7 @@ def test_events_bridge_plain(graph, mocker):
     assert labels_handler.call_args_list == [
         mocker.call('vertex_id', 'TOTALLY NEW LABEL', 'test')]
     # on_terminal_changed, on_terminal_with_port_changed
-    with CallbackBarrier(noop) as cb_barrier:
+    with CallbackBarrier() as cb_barrier:
         cb_barrier.increment(2)
         graph.api.insert_vertex(cb_barrier, 440, 40, 20, 20, 'foo', id='foo_id')
         graph.api.insert_vertex(cb_barrier, 40, 140, 20, 20, 'bar', id='bar_id')
@@ -313,7 +313,8 @@ def test_drag_drop(loaded_graph, drag_drop_events):
 
     events_bridge = EventsBridge()
     loaded_graph.set_events_bridge(events_bridge)
-    with CallbackBlocker() as cb, CallbackBarrier(cb) as barrier:
+    with CallbackBlocker() as cb, CallbackBarrier() as barrier:
+        barrier.register(cb)
         events_bridge.on_cells_added.connect(barrier)
         barrier.increment(2)
 
@@ -543,7 +544,8 @@ def test_get_cell_count(loaded_graph):
     """
     from qmxgraph.common_testing import get_cell_count
 
-    with CallbackBlocker() as cb, CallbackBarrier(cb) as barrier:
+    with CallbackBlocker() as cb, CallbackBarrier() as barrier:
+        barrier.register(cb)
         barrier.increment(3)
         loaded_graph.api.insert_vertex(barrier, 10, 10, 50, 50, 'A')
         loaded_graph.api.insert_vertex(barrier, 400, 300, 50, 50, 'B')
@@ -563,7 +565,8 @@ def test_get_cell_ids(loaded_graph):
     """
     from qmxgraph.common_testing import get_cell_ids
 
-    with CallbackBlocker() as cb, CallbackBarrier(cb) as barrier:
+    with CallbackBlocker() as cb, CallbackBarrier() as barrier:
+        barrier.register(cb)
         barrier.increment(3)
         loaded_graph.api.insert_vertex(barrier, 10, 10, 50, 50, 'A')
         loaded_graph.api.insert_vertex(barrier, 400, 300, 50, 50, 'B')
@@ -735,20 +738,3 @@ def handler_(graph):
     :rtype: _HandlerFixture
     """
     return _HandlerFixture(graph)
-
-
-class CB(CallbackBlocker):
-    """
-    Helper class extending `CallbackBlocker` that can be used with most of
-    qmxgraph's async api calls.
-
-    ```
-    assert api.some_async_func(CB(), ...).get_result() == expected_value
-    ```
-
-    When and api function do not return `result_callback` unchanged it is
-    recommended the use of `CallbackBlocker` as a context manager.
-    """
-    def get_result(self):
-        self.wait()
-        return self.args[0]

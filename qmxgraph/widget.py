@@ -353,7 +353,7 @@ class QmxGraph(QWidget):
             if is_loaded:
                 # Whenever graph widget is resized, it is going to resize
                 # underlying graph in JS to fit widget as well as possible.
-                self.api.resize_container(_noop, width, height)
+                self.api.resize_container(noop, width, height)
 
         width = event.size().width()
         height = event.size().height()
@@ -398,18 +398,19 @@ class QmxGraph(QWidget):
                 return
 
             if is_loaded:
-                with CallbackBarrier(trigger_load_finished) as cb_barrier:
+                with CallbackBarrier() as barrier:
+                    barrier.register(trigger_load_finished)
                     # TODO: widget remain w/ disabled appearance even after enabled
                     # Allow user to interact with page again
                     # self_._web_view.setEnabled(True)
-                    self_._connect_events_bridge(cb_barrier)
-                    self_._connect_double_click_handler(cb_barrier)
-                    self_._connect_popup_menu_handler(cb_barrier)
+                    self_._connect_events_bridge(barrier)
+                    self_._connect_double_click_handler(barrier)
+                    self_._connect_popup_menu_handler(barrier)
 
                     width = self_.width()
                     height = self_.height()
-                    cb_barrier.increment()
-                    self_.api.resize_container(cb_barrier, width, height)
+                    barrier.increment()
+                    self_.api.resize_container(barrier, width, height)
             else:
                 self_.loadFinished.emit(False)
 
@@ -480,7 +481,7 @@ class QmxGraph(QWidget):
                         vertex_x = x + (v['dx'] - v['width'] * 0.5) * scale
                         vertex_y = y + (v['dy'] - v['height'] * 0.5) * scale
                         self.api.insert_vertex(
-                            _noop,
+                            noop,
                             x=vertex_x,
                             y=vertex_y,
                             width=v['width'],
@@ -498,7 +499,7 @@ class QmxGraph(QWidget):
                 decorations = parsed.get('decorations', [])
                 for v in decorations:
                     self.api.insert_decoration(
-                        _noop,
+                        noop,
                         x=x,
                         y=y,
                         width=v['width'],
@@ -733,5 +734,5 @@ class _JsPythonPopupMenuBridge(_PopupMenuBridge):
     _create_async_slots(locals(), _PopupMenuBridge)
 
 
-def _noop(*args):
+def noop(*args):
     pass

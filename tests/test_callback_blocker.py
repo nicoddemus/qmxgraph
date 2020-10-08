@@ -9,7 +9,8 @@ def test_callback_barrier_context_manager_call_before_wait(
     mocker, pass_self, n_calls
 ):
     stub = mocker.Mock()
-    with CallbackBarrier(stub, pass_self) as barrier:
+    with CallbackBarrier() as barrier:
+        barrier.register(stub, pass_self)
         barrier.increment(n_calls)
         # Calls inside context manager.
         for _ in range(n_calls):
@@ -28,7 +29,8 @@ def test_callback_barrier_context_manager_call_after_wait(
     mocker, pass_self, n_calls
 ):
     stub = mocker.Mock()
-    with CallbackBarrier(stub, pass_self) as barrier:
+    with CallbackBarrier() as barrier:
+        barrier.register(stub, pass_self)
         barrier.increment(n_calls)
         assert stub.call_count == 0
     assert stub.call_count == 0
@@ -47,7 +49,8 @@ def test_callback_barrier_no_context_manager(
     mocker, n_calls
 ):
     stub = mocker.Mock()
-    barrier = CallbackBarrier(stub)
+    barrier = CallbackBarrier()
+    barrier.register(stub)
     barrier.increment(n_calls)
     for _ in range(n_calls):
         barrier()
@@ -58,14 +61,16 @@ def test_callback_barrier_no_context_manager(
 
 def test_callback_barrier_no_expected_calls(mocker):
     stub = mocker.Mock()
-    with CallbackBarrier(stub):
+    with CallbackBarrier() as barrier:
+        barrier.register(stub)
         assert stub.call_count == 0
     assert stub.call_count == 1
 
 
 def test_callback_barrier_stored_result(mocker):
     stub = mocker.Mock()
-    with CallbackBarrier(stub, True) as barrier:
+    with CallbackBarrier() as barrier:
+        barrier.register(stub, True)
         barrier.increment(2)
         foo = barrier['foo']
         bar = barrier['bar']
@@ -86,7 +91,8 @@ def test_callback_barrier_stored_result(mocker):
 
 def test_callback_barrier_error_increment_after_wait(mocker):
     stub = mocker.Mock()
-    with CallbackBarrier(stub, True) as barrier:
+    with CallbackBarrier() as barrier:
+        barrier.register(stub, True)
         barrier.increment()
         barrier.create_stored_result_callback('foo')
         assert stub.call_count == 0
@@ -104,7 +110,8 @@ def test_callback_barrier_error_increment_after_wait(mocker):
 
 def test_callback_barrier_error_call_on_crossed_barrier(mocker):
     stub = mocker.Mock()
-    with CallbackBarrier(stub, True) as barrier:
+    with CallbackBarrier() as barrier:
+        barrier.register(stub, True)
         barrier.increment()
         assert stub.call_count == 0
     assert stub.call_count == 0
@@ -119,7 +126,8 @@ def test_callback_barrier_error_call_on_crossed_barrier(mocker):
 
 def test_callback_barrier_error_call_twice_stored_result(mocker):
     stub = mocker.Mock()
-    with CallbackBarrier(stub, True) as barrier:
+    with CallbackBarrier() as barrier:
+        barrier.register(stub, True)
         barrier.create_stored_result_callback('foo')
         assert stub.call_count == 0
     assert stub.call_count == 0

@@ -73,3 +73,20 @@ def wait_signals(
     finally:
         for signal_instance, cb in reversed(connected_callback_blockers):
             silent_disconnect(signal_instance, cb)
+
+
+class CB(CallbackBlocker):
+    """
+    Helper class extending `CallbackBlocker` that can be used with most of
+    qmxgraph's async api calls.
+
+    ```
+    assert api.some_async_func(CB(), ...).get_result() == expected_value
+    ```
+
+    When and api function do not return `result_callback` unchanged it is
+    recommended the use of `CallbackBlocker` as a context manager.
+    """
+    def get_result(self):
+        self.wait()
+        return self.args[0]
