@@ -198,8 +198,11 @@ class QmxGraph(QWidget):
 
         :param ErrorHandlingBridge bridge: Handler for errors.
         """
-        silent_disconnect(self._error_bridge.on_error, bridge.on_error)
-        self._error_bridge.on_error.connect(bridge.on_error)
+        if bridge is None:
+            silent_disconnect(self._error_bridge.on_error, None)
+        else:
+            silent_disconnect(self._error_bridge.on_error, bridge.on_error)
+            self._error_bridge.on_error.connect(bridge.on_error)
 
     def set_events_bridge(self, bridge):
         """
@@ -212,11 +215,16 @@ class QmxGraph(QWidget):
             k for k, v in EventsBridge.__dict__.items()
             if isinstance(v, pyqtSignal)
         ]
-        for signal_name in signal_name_list:
-            own_signal = getattr(self._events_bridge, signal_name)
-            outside_signal = getattr(bridge, signal_name)
-            silent_disconnect(own_signal, outside_signal)
-            own_signal.connect(outside_signal)
+        if bridge is None:
+            for signal_name in signal_name_list:
+                own_signal = getattr(self._events_bridge, signal_name)
+                silent_disconnect(own_signal, None)
+        else:
+            for signal_name in signal_name_list:
+                own_signal = getattr(self._events_bridge, signal_name)
+                outside_signal = getattr(bridge, signal_name)
+                silent_disconnect(own_signal, outside_signal)
+                own_signal.connect(outside_signal)
 
     def _connect_events_bridge(self, cb_barrier):
         """

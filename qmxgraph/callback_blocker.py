@@ -265,4 +265,7 @@ def silent_disconnect(signal: pyqtSignal, slot: Callable) -> None:
     """
     from contextlib import suppress
     with suppress(TypeError, RuntimeError):
-        signal.disconnect(slot)
+        if slot is None:
+            signal.disconnect()
+        else:
+            signal.disconnect(slot)
