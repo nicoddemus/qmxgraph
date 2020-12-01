@@ -58,8 +58,8 @@ _is_optional_parent_anchor_position = attr.validators.optional(
 
 
 def _convert_parent_anchor_position(v):
-    if v is None:
-        return
+    if not v:
+        return None
     return ParentAnchorPosition(**v)
 
 

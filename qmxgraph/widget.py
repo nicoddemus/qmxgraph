@@ -211,7 +211,7 @@ class QmxGraph(QWidget):
             self.api.on_view_update(
                 'bridge_events_handler.on_view_update')
             self.api.on_cells_bounds_changed(
-                'bridge_events_handler.cells_bounds_changed')
+                'bridge_events_handler.on_cells_bounds_changed')
 
     def set_double_click_handler(self, handler):
         """

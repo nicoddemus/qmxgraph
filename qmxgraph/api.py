@@ -854,7 +854,7 @@ class QmxGraphApi(object):
         Call a function in underlying API provided by JavaScript graph.
 
         :param str fn: A function call available in API.
-        :param list[Any] args: Positional arguments passed to graph's
+        :param Any args: Positional arguments passed to graph's
             JavaScript API call (unfortunately can't use named arguments
             with JavaScript). All object passed must be JSON encodable or
             Variable instances.
